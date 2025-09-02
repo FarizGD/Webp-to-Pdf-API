@@ -33,7 +33,7 @@ def nh_to_pdf():
 
         pdf = FPDF()
         for i, page in enumerate(chapter.pages):
-            url = page.uri  # <-- FIX: use the Image object's uri
+            url = page.uri
             resp = requests.get(url)
             if resp.status_code != 200:
                 continue
@@ -66,12 +66,14 @@ def nh_to_pdf():
         filename = f"/tmp/{nh_code}.pdf"
         pdf.output(filename)
 
+        # Build absolute URL for download
+        base_url = request.host_url.rstrip("/")
         result = {
             "code": nh_code,
             "title": title,
             "pages": len(chapter.pages),
             "size_bytes": os.path.getsize(filename),
-            "download_url": f"/api/download/{nh_code}.pdf"
+            "download_url": f"{base_url}/api/download/{nh_code}.pdf"
         }
         return jsonify(result), 200
 
