@@ -32,8 +32,8 @@ def nh_to_pdf():
         chapter = enma.fetch_chapter_by_symbolic_link(chapter_ref)
 
         pdf = FPDF()
-        for i, page in enumerate(chapter.pages):
-            resp = requests.get(page.url)
+        for i, url in enumerate(chapter.pages):
+            resp = requests.get(url)
             if resp.status_code != 200:
                 continue
 
