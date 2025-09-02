@@ -14,23 +14,22 @@ def nh_to_pdf():
         if not nh_code:
             return jsonify({"error": "Missing ?id parameter"}), 400
 
-        # Setup Enma
+        # Setup Enma with NHentai
         enma = Enma[Sources]()
         enma.source_manager.set_source(Sources.NHENTAI)
-        doujin = enma.get(identifier=nh_code)
+        doujin = enma.get(identifier=nh_code, with_symbolic_links=True)
 
         if not doujin:
             return jsonify({"error": "Doujin not found"}), 404
 
         title = doujin.title.english if doujin.title else f"NH-{nh_code}"
 
-        # NHentai doujin has one "chapter"
         if not doujin.chapters:
             return jsonify({"error": "No chapters found"}), 404
-        chapter = doujin.chapters[0]
 
-        # Load pages
-        chapter = enma.fetch_chapter_by_symbolic_link(chapter.link)
+        # First chapter is the whole doujin
+        chapter_ref = doujin.chapters[0]
+        chapter = enma.fetch_chapter_by_symbolic_link(link=chapter_ref.link)
 
         pdf = FPDF()
         for i, page in enumerate(chapter.pages):
@@ -38,7 +37,7 @@ def nh_to_pdf():
             if resp.status_code != 200:
                 continue
 
-            # Detect file type
+            # Detect file extension from header
             content_type = resp.headers.get("Content-Type", "").lower()
             if "png" in content_type:
                 ext = "png"
@@ -53,7 +52,7 @@ def nh_to_pdf():
             with open(tmpfile, "wb") as f:
                 f.write(resp.content)
 
-            # Convert WEBP → PNG
+            # Convert webp → png
             if ext == "webp":
                 img = Image.open(tmpfile).convert("RGB")
                 tmpfile_png = f"/tmp/page_{i}.png"
