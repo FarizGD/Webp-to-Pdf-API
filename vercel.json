@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "functions": {
+    "api/conv.py": { "runtime": "python3.11" },
+    "api/out.py": { "runtime": "python3.11" }
+  },
+  "routes": [
+    { "src": "/conv", "dest": "/api/conv.py" },
+    { "src": "/api/out/(.*)", "dest": "/api/out.py" }
+  ]
+}
