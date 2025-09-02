@@ -27,12 +27,13 @@ def nh_to_pdf():
         if not doujin.chapters:
             return jsonify({"error": "No chapters found"}), 404
 
-        # First chapter is the whole doujin
+        # First chapter = whole doujin
         chapter_ref = doujin.chapters[0]
         chapter = enma.fetch_chapter_by_symbolic_link(chapter_ref)
 
         pdf = FPDF()
-        for i, url in enumerate(chapter.pages):
+        for i, page in enumerate(chapter.pages):
+            url = page.uri  # <-- FIX: use the Image object's uri
             resp = requests.get(url)
             if resp.status_code != 200:
                 continue
@@ -52,7 +53,7 @@ def nh_to_pdf():
             with open(tmpfile, "wb") as f:
                 f.write(resp.content)
 
-            # Convert webp → png
+            # Convert WEBP → PNG
             if ext == "webp":
                 img = Image.open(tmpfile).convert("RGB")
                 tmpfile_png = f"/tmp/page_{i}.png"
