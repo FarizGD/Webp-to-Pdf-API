@@ -1,6 +1,6 @@
 import os
 import requests
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, after_this_request
 from fpdf import FPDF
 from PIL import Image
 from enma import Enma, Sources
@@ -24,9 +24,16 @@ def nh_to_pdf():
 
         title = doujin.title.english if doujin.title else f"NH-{nh_code}"
 
-        # Build PDF
+        # NHentai doujin has one "chapter"
+        if not doujin.chapters:
+            return jsonify({"error": "No chapters found"}), 404
+        chapter = doujin.chapters[0]
+
+        # Load pages
+        chapter = enma.fetch_chapter_by_symbolic_link(chapter.link)
+
         pdf = FPDF()
-        for i, page in enumerate(doujin.pages):
+        for i, page in enumerate(chapter.pages):
             resp = requests.get(page.url)
             if resp.status_code != 200:
                 continue
@@ -42,29 +49,29 @@ def nh_to_pdf():
             else:
                 ext = "jpg"
 
-            tmpfile = f"page_{i}.{ext}"
+            tmpfile = f"/tmp/page_{i}.{ext}"
             with open(tmpfile, "wb") as f:
                 f.write(resp.content)
 
-            # Convert webp → png
+            # Convert WEBP → PNG
             if ext == "webp":
                 img = Image.open(tmpfile).convert("RGB")
-                tmpfile_png = f"page_{i}.png"
+                tmpfile_png = f"/tmp/page_{i}.png"
                 img.save(tmpfile_png, "PNG")
                 tmpfile = tmpfile_png
 
             pdf.add_page()
             pdf.image(tmpfile, x=10, y=10, w=180)
 
-        filename = f"{nh_code}.pdf"
+        filename = f"/tmp/{nh_code}.pdf"
         pdf.output(filename)
 
         result = {
             "code": nh_code,
             "title": title,
-            "pages": len(doujin.pages),
+            "pages": len(chapter.pages),
             "size_bytes": os.path.getsize(filename),
-            "download_url": f"/api/download/{filename}"
+            "download_url": f"/api/download/{nh_code}.pdf"
         }
         return jsonify(result), 200
 
@@ -74,9 +81,19 @@ def nh_to_pdf():
 
 @app.route("/api/download/<path:filename>", methods=["GET"])
 def download(filename):
-    if not filename or not os.path.exists(filename):
+    filepath = os.path.join("/tmp", filename)
+    if not os.path.exists(filepath):
         return jsonify({"error": "File not found"}), 404
-    return send_file(filename, as_attachment=True)
+
+    @after_this_request
+    def cleanup(response):
+        try:
+            os.remove(filepath)
+        except Exception:
+            pass
+        return response
+
+    return send_file(filepath, as_attachment=True)
 
 
 if __name__ == "__main__":
