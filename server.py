@@ -29,7 +29,7 @@ def nh_to_pdf():
 
         # First chapter is the whole doujin
         chapter_ref = doujin.chapters[0]
-        chapter = enma.fetch_chapter_by_symbolic_link(link=chapter_ref.link)
+        chapter = enma.fetch_chapter_by_symbolic_link(chapter_ref)
 
         pdf = FPDF()
         for i, page in enumerate(chapter.pages):
@@ -37,7 +37,7 @@ def nh_to_pdf():
             if resp.status_code != 200:
                 continue
 
-            # Detect file extension from header
+            # Detect file extension
             content_type = resp.headers.get("Content-Type", "").lower()
             if "png" in content_type:
                 ext = "png"
