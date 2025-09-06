@@ -85,14 +85,6 @@ def download(filename):
     if not os.path.exists(filepath):
         return jsonify({"error": "File not found"}), 404
 
-    @after_this_request
-    def cleanup(response):
-        try:
-            os.remove(filepath)
-        except Exception:
-            pass
-        return response
-
     return send_file(filepath, as_attachment=True)
 
 
